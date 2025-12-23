@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Import config and dates from same directory
-from config import get_tasks_root, get_folder
+from config import get_tasks_root, get_folder, get_link_format
 from dates import get_week_dates
 
 # Get directories from config
@@ -193,6 +193,18 @@ def format_date_header(date):
     """Format date as 'Monday, October 7'."""
     return date.strftime('%A, %B %-d')
 
+
+def format_link(filename, folder=None):
+    """Format a link based on the configured link format."""
+    link_format = get_link_format()
+    if link_format == "markdown":
+        if folder:
+            return f"[{filename}]({folder}/{filename}.md)"
+        return f"[{filename}]({filename}.md)"
+    else:
+        # Default to obsidian wiki-links
+        return f"[[{filename}]]"
+
 def generate_today_md(dates):
     """Generate today.md file."""
     print("\nGenerating today.md...")
@@ -213,25 +225,25 @@ def generate_today_md(dates):
     if overdue:
         content += "## Overdue\n"
         for filename, due_date in overdue:
-            content += f"- [ ] [[{filename}]] (due: {due_date})\n"
+            content += f"- [ ] {format_link(filename, 'tasks')} (due: {due_date})\n"
         content += "\n"
 
     content += "## Due Today\n"
     if due_today:
         for filename in due_today:
-            content += f"- [ ] [[{filename}]]\n"
+            content += f"- [ ] {format_link(filename, 'tasks')}\n"
     content += "\n"
 
     if ideas:
         content += "## In Progress Ideas\n"
         for filename in ideas:
-            content += f"- [[{filename}]]\n"
+            content += f"- {format_link(filename, 'ideas')}\n"
         content += "\n"
 
     if research:
         content += "## Research\n"
         for filename in research:
-            content += f"- [ ] [[{filename}]]\n"
+            content += f"- [ ] {format_link(filename, 'tasks')}\n"
 
     # Write file
     with open(BASE_DIR / "today.md", 'w') as f:
@@ -278,7 +290,7 @@ def generate_this_week_md(dates):
         if tasks:
             content += f"## {format_date_header(day)}\n"
             for filename in tasks:
-                content += f"- [ ] [[{filename}]]\n"
+                content += f"- [ ] {format_link(filename, 'tasks')}\n"
             content += "\n"
             total_tasks += len(tasks)
 
@@ -312,7 +324,7 @@ def generate_next_week_md(dates):
         if tasks:
             content += f"## {format_date_header(day)}\n"
             for filename in tasks:
-                content += f"- [ ] [[{filename}]]\n"
+                content += f"- [ ] {format_link(filename, 'tasks')}\n"
             content += "\n"
             total_tasks += len(tasks)
 

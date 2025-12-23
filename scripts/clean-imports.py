@@ -12,7 +12,7 @@ Files with type: bug → bugs/
 import subprocess
 from pathlib import Path
 
-from config import get_tasks_root, get_folder
+from config import get_tasks_root, get_folder, get_link_format
 
 
 # Map type values to folder names
@@ -35,6 +35,16 @@ def run_command(cmd):
         text=True
     )
     return result.stdout.strip(), result.stderr.strip(), result.returncode
+
+
+def format_link(filename, folder):
+    """Format a link based on the configured link format."""
+    link_format = get_link_format()
+    if link_format == "markdown":
+        return f"[{filename}]({folder}/{filename}.md)"
+    else:
+        # Default to obsidian wiki-links
+        return f"[[{filename}]]"
 
 
 def clean_imports():
@@ -94,7 +104,7 @@ def clean_imports():
                 files = moved[folder_name]
                 print(f"{folder_name}/ ({len(files)} file{'s' if len(files) != 1 else ''}):")
                 for f in files:
-                    print(f"  - [[{f}]]")
+                    print(f"  - {format_link(f, folder_name)}")
                 print()
 
     if skipped:

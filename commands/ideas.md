@@ -15,7 +15,7 @@ Generate a list of ideas organized by status.
    - Heading: `# Ideas`
    - "In Progress" section with links to in-progress ideas
    - "Noodling" section with links to noodling ideas
-   - Use format: `- [[idea-name]]`
+   - Use link format from `links.format` in config
 
 ## Important
 
