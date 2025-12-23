@@ -5,7 +5,7 @@ A Claude Code plugin for markdown-based task management. Generates daily/weekly 
 ## Installation
 
 ```bash
-claude plugins add cc-plugins/task-management
+claude plugins add teresa-torres-plugins/task-management
 ```
 
 After installation, run the setup wizard:
