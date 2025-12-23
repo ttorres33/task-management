@@ -25,15 +25,14 @@ This script will:
 
 ### Step 2: Generate Research Digest (Optional)
 
-**Only if the research-system plugin is installed:**
+**Only if `integrations.research_system` is `true` in config:**
 
-Run the research digest slash command:
+1. Run the research digest slash command:
+   ```
+   SlashCommand: /research-system:generate-research-digest
+   ```
 
-```
-SlashCommand: /research-system:generate-research-digest
-```
-
-Then add a Research section to today.md (after "In Progress Ideas" section). Use the link format from the research-system config (`links.format` in `~/.claude/research-config/config.yaml`).
+2. Add a Research section to today.md (after "In Progress Ideas" section) using the `links.format` setting from config.
 
 ## Example Output - today.md
 

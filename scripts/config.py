@@ -43,3 +43,15 @@ def get_all_task_dirs():
         get_folder("bugs"),
         get_folder("import"),
     ]
+
+
+def get_link_format():
+    """Return the link format: 'obsidian' or 'markdown'."""
+    config = get_config()
+    return config.get("links", {}).get("format", "obsidian")
+
+
+def is_research_system_enabled():
+    """Return True if research-system integration is enabled."""
+    config = get_config()
+    return config.get("integrations", {}).get("research_system", False)

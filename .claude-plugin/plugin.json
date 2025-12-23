@@ -1,13 +1,13 @@
 {
   "name": "task-management",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Markdown-based task management with daily/weekly views, archiving, and idea tracking",
   "author": {
     "name": "Teresa Torres",
     "email": "contact@producttalk.org"
   },
-  "homepage": "https://github.com/ttorres33/cc-plugins",
-  "repository": "https://github.com/ttorres33/cc-plugins",
+  "homepage": "https://github.com/ttorres33/task-management",
+  "repository": "https://github.com/ttorres33/task-management",
   "keywords": [
     "tasks",
     "productivity",

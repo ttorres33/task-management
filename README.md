@@ -79,6 +79,8 @@ Show this documentation.
 
 Task conventions and file organization rules. Claude uses this skill when creating or modifying task files to ensure consistent formatting.
 
+To get Claude to reliably use this skill, try putting the following in your Tasks root directory CLAUDE.md: "Use the manage-tasks skill whenever creating or updating tasks."
+
 ## File Structure
 
 The plugin expects this folder structure in your tasks root:

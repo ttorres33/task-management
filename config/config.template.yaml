@@ -15,3 +15,9 @@ folders:
   bugs: "bugs"             # Issues to fix
   completed: "completed"   # Archived one-time tasks
   import: "import"         # Staging area for triage
+
+links:
+  format: "obsidian"       # "obsidian" for [[wiki-links]] or "markdown" for [text](path)
+
+integrations:
+  research_system: false   # Set to true to include research digest in /today
