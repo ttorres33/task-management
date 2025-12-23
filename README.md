@@ -30,7 +30,26 @@ folders:
   bugs: "bugs"
   completed: "completed"
   import: "import"
+
+links:
+  format: "obsidian"       # "obsidian" for [[wiki-links]] or "markdown" for [text](path)
+
+integrations:
+  research_system: false   # Set to true to include research digest in /today
 ```
+
+### Link Format
+
+The plugin supports two link formats:
+
+- **obsidian** (default) - Wiki-style links: `[[task-name]]`
+- **markdown** - Standard markdown links: `[task-name](tasks/task-name.md)`
+
+Choose "obsidian" if you use Obsidian or another wiki-link aware editor. Choose "markdown" for standard markdown compatibility.
+
+### Research System Integration
+
+If you have the `research-system` plugin installed and want `/today` to include a research digest section, set `integrations.research_system: true`.
 
 ## Commands
 
@@ -125,10 +144,6 @@ Task content here.
 - `recurrence: weekly | biweekly | monthly | quarterly | yearly`
 - `status: in-progress | noodling | someday` - For ideas only
 - `tags: [tag1, tag2]` - Categorization
-
-## Integration with research-system
-
-If the `research-system` plugin is installed, `/task-management:today` will include a Research section with a link to today's research digest.
 
 ## License
 
