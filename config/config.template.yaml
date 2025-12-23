@@ -1,0 +1,17 @@
+# Task Management Plugin Configuration
+# Copy this file to ~/.claude/task-management-config/config.yaml
+# and update the paths for your system.
+
+paths:
+  # Root directory containing all task folders
+  tasks_root: "/path/to/your/Tasks"
+
+folders:
+  # Folder names within tasks_root
+  tasks: "tasks"           # Items with due dates
+  ideas: "ideas"           # Projects without due dates
+  templates: "templates"   # Reusable task templates
+  memories: "memories"     # Reference items (not actionable)
+  bugs: "bugs"             # Issues to fix
+  completed: "completed"   # Archived one-time tasks
+  import: "import"         # Staging area for triage

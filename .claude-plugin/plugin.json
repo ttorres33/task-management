@@ -1,0 +1,20 @@
+{
+  "name": "task-management",
+  "version": "0.1.0",
+  "description": "Markdown-based task management with daily/weekly views, archiving, and idea tracking",
+  "author": {
+    "name": "Teresa Torres",
+    "email": "contact@producttalk.org"
+  },
+  "homepage": "https://github.com/ttorres33/cc-plugins",
+  "repository": "https://github.com/ttorres33/cc-plugins",
+  "keywords": [
+    "tasks",
+    "productivity",
+    "markdown",
+    "obsidian",
+    "daily-planning",
+    "weekly-review"
+  ],
+  "license": "MIT"
+}
