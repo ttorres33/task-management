@@ -37,3 +37,4 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+process-notes.md
