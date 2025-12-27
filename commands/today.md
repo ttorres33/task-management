@@ -25,7 +25,7 @@ This script will:
 
 ### Step 2: Generate Research Digest (Optional)
 
-**Only if `integrations.research_system` is `true` in config:**
+**Only if `integrations.research_system` is `true` in `~/.claude/task-management-config/config.yaml`:**
 
 1. Run the research digest slash command:
    ```
