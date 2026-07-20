@@ -2,6 +2,7 @@
 name: manage-tasks
 description: Task conventions and file organization for markdown-based task management. Use when creating or modifying task files.
 allowed-tools: Read, Edit, Write, Glob, Grep
+user-invocable: true
 ---
 
 # Task Management Skill
@@ -149,6 +150,9 @@ Include:
 
 ## Tagging Conventions
 
+- **Always add tags when creating a task.** Never leave `tags: []` empty.
+- **To pick tags, find similar existing tasks and reuse their tags.** Before creating a task, grep `tasks/` for files with related topics (e.g. for a speaking engagement, look at other speaking tasks; for an event, look at other event tasks) and use the same tags they use. This keeps tagging consistent across the project.
+- Only invent a new tag if no similar task exists.
 - Use semantic tags that describe the task category, context, or project
 - Keep tags lowercase and hyphenated for multi-word tags
-- Be consistent with existing tags in the project
+- If the context is ambiguous, pick the best-guess tags from similar tasks and proceed (do not ask); Teresa can correct them if needed
