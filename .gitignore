@@ -37,6 +37,9 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Internal working documentation - not for version control
 /process-notes.md
 /process-notes.md.archive
 /process-notes/
+/.claude/
