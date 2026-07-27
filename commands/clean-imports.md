@@ -4,22 +4,29 @@ description: Move reviewed files from import/ to appropriate folders based on ty
 
 # clean-imports
 
-Move all reviewed files from import/ to their appropriate folders based on type.
+Move reviewed files out of `import/` and into the folder matching their `type:` field.
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/clean-imports.py
 ```
 
-After running, summarize what was moved in a clean format:
+The script resolves which task system to act on from the current working directory,
+and prints the resolved root before moving anything. **Always include that line in
+your summary** — this command moves files.
+
+Summarize what was moved:
 
 ```
-Moved X file(s) from import/:
+Tasks root: /Users/you/Vaults/Work/Tasks  [work, via marker]
 
-tasks/ (N files):
+Moved 3 file(s) from import/:
+
+tasks/ (1 file):
 - [[task-name]]
 
-ideas/ (N files):
+ideas/ (2 files):
 - [[idea-name]]
+- [[another-idea]]
 
 Skipped (no type field):
 - filename.md
@@ -27,4 +34,7 @@ Skipped (no type field):
 Import cleanup complete!
 ```
 
-If nothing was moved, just say "No files to process in import/."
+Files with no `type:` field, or an unrecognized one, stay in `import/`.
+
+If nothing was moved, say "No files to process in import/." — but still report the
+resolved root.

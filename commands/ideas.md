@@ -1,28 +1,36 @@
 ---
-description: Generate a list of ideas organized by status
+description: Generate ideas.md, listing ideas by status
 ---
 
 # ideas
 
-Generate a list of ideas organized by status.
+Generate `ideas.md`: links to ideas grouped by status.
 
 ## Process
 
-1. Use Grep to search `ideas/` folder for ideas by status:
-   - Search for `^status: in progress` → list in "In Progress" section
-   - Search for `^status: noodling` → list in "Noodling" section
-2. Generate `ideas.md` with:
-   - Heading: `# Ideas`
-   - "In Progress" section with links to in-progress ideas
-   - "Noodling" section with links to noodling ideas
-   - Use link format from `links.format` in config
+Run the script:
 
-## Important
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/generate-ideas.py
+```
 
-- Only shows ideas with `status: in progress` or `status: noodling`
-- Ideas with `status: someday` are not included
-- Ideas without status field are not included
-- Helps you see what you're actively working on vs exploring
+The script resolves which task system to act on from the current working directory,
+then writes `ideas.md` into that root. It prints the resolved root before writing
+anything — include that line in your summary so it is always clear which system was
+touched.
+
+Report the counts from the script's output. Do not add descriptions or summaries of
+the individual ideas: this file is a generated index, and anything written here is
+overwritten on the next run.
+
+## What is included
+
+- `status: in progress` (or `in-progress`) → **In Progress**
+- `status: noodling` → **Noodling**
+
+Ideas with `status: someday`, and ideas with no status field, are deliberately
+excluded. This file answers "what am I actively working on or actively exploring",
+not "what ideas exist".
 
 ## Example Output
 
@@ -32,10 +40,10 @@ Generate a list of ideas organized by status.
 ## In Progress
 - [[story-based-customer-interviews-course]]
 - [[leadership-plan]]
-- [[vistaly-implementation]]
 
 ## Noodling
 - [[just-now-possible-podcast]]
 - [[deep-dive-case-studies]]
-- [[sales-pitch]]
 ```
+
+Both headings always appear, even when a section is empty.

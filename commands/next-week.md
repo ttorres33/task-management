@@ -4,40 +4,38 @@ description: Generate next week's task list
 
 # next-week
 
-Generate next week's task list.
+Generate `next-week.md`: tasks due Monday through Sunday of next week.
 
 ## Process
 
-1. Run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/calculate-weeks.py` to get accurate dates
-2. Use "Next Week: Monday:" and "Next Week: Sunday:" from the script output
-3. Search all files in `tasks/` folder for tasks with `due:` between next week's Monday and Sunday (inclusive)
-   - Handle both date formats: with leading zeros (`YYYY-MM-DD`) and without (`YYYY-M-D`)
-4. Generate `next-week.md` with:
-   - YAML frontmatter with `week_start` and `week_end` dates
-   - Heading: `# Next Week - Week of [Month Day]`
-   - Tasks grouped by day with subheadings: `## Monday, [Month Day]`, `## Tuesday, [Month Day]`, etc.
-   - List of task links under each day: `- [ ] [[task-name]]`
-   - Skip days with no tasks
-   - If no tasks for the entire week, add note: `No tasks scheduled for next week.`
+Run the script:
 
-**Important:** When searching for date ranges, use broad pattern like `^due: 2025-10-` then filter results to match the specific date range, accounting for both leading zero and no-leading-zero formats
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/generate-next-week.py
+```
+
+The script resolves which task system to act on from the current working directory,
+then writes `next-week.md` into that root. It prints the resolved root before writing
+anything — include that line in your summary so it is always clear which system was
+touched.
+
+Report the task count from the script's output. Do not re-read or re-render the file.
 
 ## Example Output
 
 ```markdown
 ---
-week_start: 2025-10-07
-week_end: 2025-10-13
+week_start: 2026-03-16
+week_end: 2026-03-22
 ---
-# Next Week - Week of October 7
+# Next Week - Week of March 16
 
-## Monday, October 7
+## Monday, March 16
 - [ ] [[quarterly-review]]
 - [ ] [[team-meeting-prep]]
 
-## Wednesday, October 9
+## Wednesday, March 18
 - [ ] [[client-call]]
-
-## Friday, October 11
-- [ ] [[weekly-review]]
 ```
+
+Days with no tasks are skipped.

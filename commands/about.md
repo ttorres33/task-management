@@ -22,11 +22,14 @@ Welcome to Task Management! This plugin helps you manage markdown-based tasks wi
 What would you like to learn about?
 ```
 
-Use AskUserQuestion with these options:
+Use AskUserQuestion with these options (four at a time — offer the rest if they want
+to keep going):
 - **Quick Start** - How to install and get started
 - **Commands** - List of all available slash commands
 - **Task Format** - How to structure task files
-- **Configuration** - How to configure paths and folders
+- **Configuration** - How the plugin decides which task system to act on
+- **Multiple Systems** - Running more than one task system on one machine
+- **Sharing** - Sharing a task system with another person via Obsidian Sync
 - **Full Documentation** - Show the complete README
 
 ## Step 3: Show Relevant Section
@@ -39,6 +42,8 @@ Based on the user's choice, find and display:
 - **Commands**: The "## Commands" section from README
 - **Task Format**: The "## Task File Format" section from README
 - **Configuration**: The "## Configuration" section from README
+- **Multiple Systems**: The "## Running more than one task system" section from README
+- **Sharing**: The "## Sharing a task system with another person" section from README
 - **Full Documentation**: Output the entire README
 
 ## Step 4: Offer to Continue

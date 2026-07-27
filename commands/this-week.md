@@ -4,37 +4,41 @@ description: Generate this week's task list (excluding today)
 
 # this-week
 
-Generate this week's task list (excluding today).
+Generate `this-week.md`: tasks due from tomorrow through the end of this week.
 
 ## Process
 
-1. Run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/calculate-weeks.py` to get accurate dates
-2. Use "Tomorrow:" and "This Week: Sunday:" from the script output
-3. Search all files in `tasks/` folder for tasks with `due:` between tomorrow and this week's Sunday (inclusive)
-   - Handle both date formats: with leading zeros (`YYYY-MM-DD`) and without (`YYYY-M-D`)
-4. Generate `this-week.md` with:
-   - YAML frontmatter with `week_start` and `week_end` dates
-   - Heading: `# This Week - Week ending [Month Day]`
-   - Tasks grouped by day with subheadings: `## Monday, [Month Day]`, `## Tuesday, [Month Day]`, etc.
-   - List of task links under each day: `- [ ] [[task-name]]`
-   - Skip days with no tasks
-   - If no tasks for the entire week, add note: `(Tasks due today are in today.md)`
+Run the script:
 
-**Important:** When searching for date ranges, use broad pattern like `^due: 2025-10-` then filter results to match the specific date range, accounting for both leading zero and no-leading-zero formats
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/generate-this-week.py
+```
+
+The script resolves which task system to act on from the current working directory,
+then writes `this-week.md` into that root. It prints the resolved root before writing
+anything — include that line in your summary so it is always clear which system was
+touched.
+
+Report the task count from the script's output. Do not re-read or re-render the file.
 
 ## Example Output
 
 ```markdown
 ---
-week_start: 2025-10-04
-week_end: 2025-10-06
+week_start: 2026-03-09
+week_end: 2026-03-15
 ---
-# This Week - Week ending October 6
+# This Week - Week ending March 15
 
-## Friday, October 4
+## Thursday, March 12
 - [ ] [[send-liberty-mutual-product-sheets]]
 
-## Saturday, October 5
+## Saturday, March 14
 - [ ] [[construct-connect-toolbox-sale]]
 - [ ] [[client-meeting-prep]]
 ```
+
+Days with no tasks are skipped. If today is the last day of the week, the file says
+`No tasks remaining this week.`
+
+Tasks due *today* are in `today.md`, not here.

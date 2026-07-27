@@ -15,6 +15,7 @@ without parsing the whole thing.
 
 Usage:
     python3 show-config.py [--date YYYY-MM-DD]
+    python3 show-config.py --detect-research
 """
 
 import argparse
@@ -28,7 +29,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", help="date to resolve the research digest path for "
                                        "(defaults to today)")
+    parser.add_argument("--detect-research", action="store_true",
+                        help="report only whether the research-system plugin is "
+                             "installed, without resolving a root. For /setup, which "
+                             "runs before a root exists.")
     args = parser.parse_args()
+
+    if args.detect_research:
+        installed = config.research_system_installed()
+        print(f"research_system_installed: {'yes' if installed else 'no'}")
+        return 0
 
     try:
         root, source = config.resolve_root()

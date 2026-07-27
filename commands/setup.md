@@ -1,78 +1,97 @@
 ---
-description: Configure task management plugin paths
+description: Configure a task management system in the current folder
 ---
 
 # Setup Wizard
 
-Configure the task-management plugin for your system.
+Configure a task system for the task-management plugin.
+
+This command is **additive**. It configures one task system by writing a marker file
+into that system's root folder. Running it again in a different folder adds a second
+system; it never removes or rewrites the first. There is no registry of roots — the
+marker file *is* the registration.
+
+If a global config already exists at `~/.claude/task-management-config/config.yaml`,
+leave it alone. Never overwrite it.
 
 ## Process
 
-### Step 1: Get Tasks Root Path
+### Step 1: Determine the tasks root
 
-Ask the user for their tasks root directory path. This is the folder containing their task files and subfolders.
+The tasks root is the folder that contains the task subfolders (`tasks/`, `ideas/`,
+and so on).
 
-Example: `/Users/username/Documents/Tasks` or `/Users/username/Vaults/Work/Tasks`
+Start by checking whether the current directory is already a configured root:
 
-### Step 2: Confirm Folder Structure
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/show-config.py
+```
 
-Show the user the default folder names and ask if they want to customize:
+- If it reports a root and `source: marker`, this folder (or a parent) is already
+  configured. Show the user what it resolved and ask whether they want to reconfigure
+  it or set up a *different* folder.
+- If it errors with "No task system found", proceed.
+
+Then ask the user for the tasks root path, defaulting to the current directory.
+
+Example: `/Users/username/Vaults/Work/Tasks`
+
+### Step 2: Confirm folder structure
+
+Show the default folder names and ask whether to customize:
 
 ```yaml
-folders:
-  tasks: "tasks"           # Items with due dates
-  ideas: "ideas"           # Projects without due dates
-  templates: "templates"   # Reusable task templates
-  memories: "memories"     # Reference items (not actionable)
-  bugs: "bugs"             # Issues to fix
-  completed: "completed"   # Archived one-time tasks
-  import: "import"         # Staging area for triage
+tasks: "tasks"           # Items with due dates
+ideas: "ideas"           # Projects without due dates
+templates: "templates"   # Reusable task templates
+memories: "memories"     # Reference items (not actionable)
+bugs: "bugs"             # Issues to fix
+completed: "completed"   # Archived one-time tasks
+import: "import"         # Staging area for triage
 ```
 
-Most users will use the defaults.
+Most users keep the defaults.
 
-### Step 3: Ask Link Format
+### Step 3: Ask link format
 
-Ask the user which link format they prefer:
-- **obsidian** - Wiki-style links: `[[task-name]]`
-- **markdown** - Standard markdown: `[task-name](tasks/task-name.md)`
+- **obsidian** — wiki-style links: `[[task-name]]`
+- **markdown** — standard links: `[task-name](tasks/task-name.md)`
 
-Default to "obsidian" if user is unsure.
+Default to `obsidian` if the user is unsure. For a vault shared with another person,
+recommend `obsidian`, since a shared vault is by definition being read in Obsidian.
 
-### Step 4: Check for Research System Plugin
+### Step 4: Ask about research-system integration
 
-Check if the research-system plugin is installed:
+Ask the plugin whether research-system is available. Do not probe the filesystem
+yourself:
 
 ```bash
-ls ~/.claude/plugins/research-system 2>/dev/null || ls -d ~/*/cc-plugins/research-system 2>/dev/null || echo "not found"
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/show-config.py --detect-research
 ```
 
-If found, ask the user if they want to enable the research-system integration (adds research digest to /today output).
+- `research_system_installed: yes` — ask whether to enable the integration, which
+  adds a research digest link to `/today` output.
+- `research_system_installed: no` — set `research_system: false` and do not ask.
 
-### Step 5: Validate Path
+For a root shared with another person, recommend `false`: the other person will not
+have the research-system plugin, and the digest is personal.
 
-Verify the tasks root path exists:
+### Step 5: Create the root and any missing folders
 
 ```bash
-ls -la "<tasks_root_path>"
+ls -la "<tasks_root>"
 ```
 
-If it doesn't exist, ask if the user wants to create it.
+If the root does not exist, ask whether to create it. Create any missing folders from
+step 2.
 
-### Step 6: Create Config Directory
+### Step 6: Write the marker file
 
-```bash
-mkdir -p ~/.claude/task-management-config
-```
+Write `<tasks_root>/task-management-root.md`:
 
-### Step 7: Write Config File
-
-Create `~/.claude/task-management-config/config.yaml` with the user's settings:
-
-```yaml
-paths:
-  tasks_root: "<user's path>"
-
+```markdown
+---
+name: <short-name, e.g. work or household>
 folders:
   tasks: "tasks"
   ideas: "ideas"
@@ -81,56 +100,100 @@ folders:
   bugs: "bugs"
   completed: "completed"
   import: "import"
-
 links:
   format: "<obsidian or markdown>"
-
 integrations:
   research_system: <true or false>
+  research_digest_path: "../Research/daily-digests/{date}.md"
+---
+# Task Management Root
+
+Marks this folder as a task-management root. Safe to edit; do not rename or move.
 ```
 
-### Step 8: Verify Setup
+Notes:
 
-Confirm the config was written:
+- `name` is what makes the file a valid marker. Without it, the file is treated as an
+  ordinary note and ignored.
+- The `folders` block may be omitted to accept the defaults, but it must be present if
+  this root uses custom folder names. Settings do not merge — a marker supplies the
+  whole set or none of it.
+- The marker contains **no absolute paths**. The root is implied by the file's own
+  location, so the file works unchanged on another device or under another user's home
+  directory.
+- Only include `research_digest_path` if `research_system` is `true`.
+- It is a Markdown file rather than a dotfile so that Obsidian Sync will sync it.
+  Hidden files and `.yaml` files do not sync reliably; Markdown always does.
+
+### Step 7: Verify
 
 ```bash
-cat ~/.claude/task-management-config/config.yaml
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/show-config.py
 ```
 
-### Step 9: Create Missing Folders
+Run this **from inside the new root**. Confirm it reports the expected path,
+`source: marker`, and the chosen link format.
 
-Check which folders exist and offer to create missing ones:
+### Step 8: Offer a default root (only if no global config exists)
+
+The marker handles every case where Claude is launched inside or directly above the
+tasks root. For running commands from somewhere else entirely — a code project, say —
+the plugin falls back to a global default.
+
+Check first:
 
 ```bash
-ls -la "<tasks_root>"
+cat ~/.claude/task-management-config/config.yaml 2>/dev/null || echo "none"
 ```
 
-For any missing folders from the config, ask if user wants to create them.
+- **If a config already exists:** leave it untouched. Mention that it still works and
+  that this root's own settings now come from its marker.
+- **If none exists:** ask whether to create one naming this root as the default:
+
+  ```bash
+  mkdir -p ~/.claude/task-management-config
+  ```
+
+  ```yaml
+  # Which task system to use when the working directory is outside every tasks root.
+  default_root: "<tasks_root>"
+  ```
+
+  This is optional. Skipping it means commands run from outside any tasks root will
+  report an error explaining how to choose one, which is the correct behavior on a
+  machine that deliberately keeps no global state.
 
 ## Example Output
 
 ```
 Task Management Setup Complete!
 
-Configuration saved to: ~/.claude/task-management-config/config.yaml
-
-Tasks root: /Users/ttorres/Vaults/Work/Tasks
-Link format: obsidian
-Research integration: enabled
+Tasks root:   /Users/you/Vaults/Teresa-Rick/Tasks
+Name:         household
+Marker:       /Users/you/Vaults/Teresa-Rick/Tasks/task-management-root.md
+Link format:  obsidian
+Research:     disabled
 
 Folders:
-  - tasks/       (exists)
-  - ideas/       (exists)
-  - templates/   (exists)
-  - memories/    (exists)
-  - bugs/        (exists)
-  - completed/   (exists)
-  - import/      (exists)
+  - tasks/       (created)
+  - ideas/       (created)
+  - templates/   (created)
+  - memories/    (created)
+  - bugs/        (created)
+  - completed/   (created)
+  - import/      (created)
 
-You can now use:
+Default root: unchanged (~/.claude/task-management-config/config.yaml already
+              points at /Users/you/Vaults/Work/Tasks)
+
+To use this system, run Claude from inside this folder — or from the vault folder
+directly above it. There are no flags to pass; the working directory decides.
+
   /task-management:today    - Generate daily task files
   /task-management:archive  - Archive completed tasks
-  /task-management:ideas    - List ideas by status
+  /task-management:ideas    - Regenerate ideas.md
 
-To get Claude to reliably use the manage-tasks skill when creating and updating tasks, add the following to your CLAUDE.md in your Tasks root directory: "Use the manage-tasks skill whenever creating or updating tasks."
+To get Claude to reliably use the manage-tasks skill when creating and updating
+tasks, add this to a CLAUDE.md in your tasks root: "Use the manage-tasks skill
+whenever creating or updating tasks."
 ```
