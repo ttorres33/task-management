@@ -46,3 +46,22 @@ def get_week_dates():
         'next_week_start': str(next_week_monday),
         'next_week_end': str(next_week_sunday),
     }
+
+
+def generate_days_between(start_date, end_date):
+    """Return a list of datetimes from start to end, inclusive. Both YYYY-MM-DD."""
+    start = datetime.strptime(start_date, '%Y-%m-%d')
+    end = datetime.strptime(end_date, '%Y-%m-%d')
+
+    days = []
+    current = start
+    while current <= end:
+        days.append(current)
+        current += timedelta(days=1)
+
+    return days
+
+
+def format_date_header(date):
+    """Format a datetime as 'Monday, October 7'."""
+    return date.strftime('%A, %B %-d')
