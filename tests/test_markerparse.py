@@ -85,6 +85,20 @@ class TestParse(unittest.TestCase):
         with self.assertRaises(ParseError):
             parse("this is not yaml at all\n")
 
+    def test_rejects_a_list_item_under_a_populated_map(self):
+        """
+        Accepting it would replace the map with a list, silently discarding every
+        key already read under that heading -- a wrong answer rather than an error,
+        which is the failure mode this parser exists to avoid.
+        """
+        with self.assertRaises(ParseError):
+            parse("folders:\n  tasks: tasks\n  - stray\n")
+
+    def test_an_unterminated_quote_does_not_swallow_a_comment(self):
+        """A bare apostrophe in ordinary prose must not open a quote to end of line."""
+        parsed = parse("name: rick's tasks  # household\n")
+        self.assertEqual(parsed["name"], "rick's tasks")
+
 
 class TestParseLenient(unittest.TestCase):
     """The legacy global config path: strict first, PyYAML as a fallback."""
@@ -136,6 +150,30 @@ class TestFrontmatter(unittest.TestCase):
         frontmatter, body = markerparse.split_frontmatter("# Just a heading\n")
         self.assertIsNone(frontmatter)
         self.assertEqual(body, "# Just a heading\n")
+
+    def test_a_value_containing_three_dashes_does_not_truncate_the_frontmatter(self):
+        """
+        Splitting on the first `---` anywhere would cut the frontmatter mid-value and
+        drop every key after it. The result still parses and still looks like a valid
+        marker, so the root would quietly run on built-in defaults instead of its own
+        settings. The closing delimiter must be a line of its own.
+        """
+        text = ("---\n"
+                "name: a---b\n"
+                "links:\n"
+                "  format: markdown\n"
+                "---\n"
+                "# Body\n")
+        frontmatter, body = markerparse.split_frontmatter(text)
+        parsed = parse(frontmatter)
+
+        self.assertEqual(parsed["name"], "a---b")
+        self.assertEqual(parsed["links"], {"format": "markdown"})
+        self.assertEqual(body, "# Body\n")
+
+    def test_an_unclosed_frontmatter_block_is_not_frontmatter(self):
+        frontmatter, body = markerparse.split_frontmatter("---\nname: x\n# no close\n")
+        self.assertIsNone(frontmatter)
 
 
 if __name__ == "__main__":

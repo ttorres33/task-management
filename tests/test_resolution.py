@@ -293,6 +293,54 @@ class TestSettingsResolution(ResolutionTestCase):
         with plugin_env(cwd=self.tmp, home=self.home, root_override=root) as config:
             self.assertEqual(config.get_link_format(), "markdown")  # from global config
 
+    def test_a_folder_name_escaping_the_root_is_rejected(self):
+        """
+        Markers arrive over sync from whoever else has the vault, so `folders` values
+        are input from another machine. A value like "../../elsewhere" would make
+        /archive move a collaborator's task files out of the vault entirely -- and
+        clean-imports would mkdir the destination first. A typo does this as
+        readily as malice.
+        """
+        root = self.make_root("vault/Tasks", folders={"completed": "../../../escaped"})
+
+        with plugin_env(cwd=root, home=self.home) as config:
+            with self.assertRaises(ValueError) as caught:
+                config.get_folder("completed")
+            self.assertIn("completed", str(caught.exception))
+
+    def test_a_folder_name_that_is_a_subpath_is_rejected(self):
+        root = self.make_root("vault/Tasks", folders={"tasks": "a/b"})
+
+        with plugin_env(cwd=root, home=self.home) as config:
+            with self.assertRaises(ValueError):
+                config.get_folder("tasks")
+
+    def test_an_unquoted_no_is_rejected_rather_than_becoming_a_boolean(self):
+        """
+        YAML reads bare `no` as False, which would otherwise reach `root / False` and
+        surface as a bare TypeError instead of a message naming the key.
+        """
+        root = self.make_root("vault/Tasks", with_marker=False)
+        write(root / "task-management-root.md",
+              "---\nname: t\nfolders:\n  tasks: no\n---\n")
+
+        with plugin_env(cwd=root, home=self.home) as config:
+            with self.assertRaises(ValueError) as caught:
+                config.get_folder("tasks")
+            self.assertIn("tasks", str(caught.exception))
+
+    def test_an_unknown_digest_placeholder_names_the_key(self):
+        root = self.make_root(
+            "vault/Tasks",
+            integrations={"research_system": True,
+                          "research_digest_path": "../R/{year}/{date}.md"},
+        )
+
+        with plugin_env(cwd=root, home=self.home) as config:
+            with self.assertRaises(ValueError) as caught:
+                config.get_research_digest_path("2026-03-11")
+            self.assertIn("research_digest_path", str(caught.exception))
+
     def test_research_digest_path_resolves_relative_to_the_root(self):
         root = self.make_root(
             "vault/Tasks",

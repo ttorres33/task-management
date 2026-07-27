@@ -71,7 +71,10 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/show-config.py --detect-research
 
 - `research_system_installed: yes` — ask whether to enable the integration, which
   adds a research digest link to `/today` output.
-- `research_system_installed: no` — set `research_system: false` and do not ask.
+- `research_system_installed: no` — default to `research_system: false`. Mention the
+  one case where `true` still makes sense: if this machine receives digests from
+  another machine through vault sync, `true` links the existing digest without
+  generating anything. Otherwise leave it `false`.
 
 For a root shared with another person, recommend `false`: the other person will not
 have the research-system plugin, and the digest is personal.

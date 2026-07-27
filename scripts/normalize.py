@@ -20,6 +20,7 @@ import re
 from datetime import datetime
 
 from config import get_all_task_dirs
+from taskquery import md_files
 
 DATE_FIELD_PATTERN = r'^(due|completed|created|updated):\s*(.+)$'
 
@@ -52,9 +53,20 @@ def parse_date(date_str):
 
 
 def normalize_file_dates(file_path):
-    """Normalize date fields in one file. Returns True if the file was modified."""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+    """
+    Normalize date fields in one file. Returns True if the file was modified.
+
+    An unreadable file is skipped rather than raised on. Normalizing used to run as
+    a separate child process whose failure only printed to stderr, so /today carried
+    on and still generated its files. Now that it is a direct call, one file that is
+    not valid UTF-8 anywhere under tasks/ ideas/ bugs/ import/ would otherwise abort
+    the whole run before anything was written.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except (OSError, UnicodeDecodeError):
+        return False
 
     if not content.startswith('---'):
         return False
@@ -108,9 +120,7 @@ def normalize_all():
     modified_files = []
 
     for task_dir in get_all_task_dirs():
-        if not task_dir.exists():
-            continue
-        for file_path in sorted(task_dir.glob('*.md')):
+        for file_path in md_files(task_dir):
             if normalize_file_dates(file_path):
                 modified_files.append(str(file_path))
 

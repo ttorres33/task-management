@@ -46,9 +46,15 @@ If the output includes a `NOTICE:` block, surface it to the user verbatim. It me
 the integration is enabled but the plugin was not detected, which is worth knowing
 rather than silently working around.
 
-To add the Research section, append it to `today.md` after the "In Progress Ideas"
-section, linking the path from the `research_digest:` line and using the format from
-the `link_format:` line.
+**Adding the digest link.** Step 1 may already have written a `## Research` section —
+it lists any tasks tagged `research-review` or `research-summary-needed`. So:
+
+- If `today.md` already has a `## Research` heading, add the digest link as one more
+  bullet under it. Do not add a second heading.
+- If it does not, add `## Research` at the end of the file.
+
+Link the path from the `research_digest:` line, using the format from the
+`link_format:` line.
 
 ## Example Output - today.md
 
@@ -71,8 +77,12 @@ date: 2026-03-11
 - [[course-redesign]]
 
 ## Research
+- [ ] [[read-attention-paper]]
 - [ ] [Review today's research digest](../Research/daily-digests/2026-03-11.md)
 ```
+
+The first bullet is a research-tagged task, written by the script. The second is the
+digest link, added in step 2 — one section, not two.
 
 ## Example Output - this-week.md
 

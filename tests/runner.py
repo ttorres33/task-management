@@ -64,12 +64,12 @@ def _reset_plugin_modules():
             del sys.modules[name]
 
 
-def run_pipeline(dest, hostile=False):
+def run_pipeline(dest, hostile=False, link_format="obsidian"):
     """
     Build a fixture under `dest`, run the pipeline, and return
     {"daily": <snapshot>, "imports": <snapshot>}.
     """
-    home, tasks_root = fixture.build(dest, hostile=hostile)
+    home, tasks_root = fixture.build(dest, hostile=hostile, link_format=link_format)
 
     os.environ["HOME"] = str(home)
     # Guarantee any subprocess the pre-0.3.0 code spawns uses this very interpreter.
@@ -121,6 +121,9 @@ def main():
     parser.add_argument("--hostile", action="store_true",
                         help="use a root path with a space and an ampersand, and a "
                              "task filename with an apostrophe (R7)")
+    parser.add_argument("--link-format", default="obsidian",
+                        choices=["obsidian", "markdown"],
+                        help="link format for the fixture's config")
     parser.add_argument("--keep", metavar="DIR",
                         help="build the fixture here instead of a temp dir, and keep it")
     args = parser.parse_args()
@@ -128,11 +131,12 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
+    options = {"hostile": args.hostile, "link_format": args.link_format}
     if args.keep:
-        snapshots = run_pipeline(Path(args.keep), hostile=args.hostile)
+        snapshots = run_pipeline(Path(args.keep), **options)
     else:
         with tempfile.TemporaryDirectory() as tmp:
-            snapshots = run_pipeline(Path(tmp) / "fixture", hostile=args.hostile)
+            snapshots = run_pipeline(Path(tmp) / "fixture", **options)
 
     _assert_pipeline_really_ran(snapshots["daily"])
 

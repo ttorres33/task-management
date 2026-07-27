@@ -16,7 +16,7 @@ archiving runs inside /today.
 import shutil
 
 from config import get_folder
-from taskquery import has_field
+from taskquery import has_field, md_files
 
 
 def archive_completed_tasks():
@@ -32,10 +32,7 @@ def archive_completed_tasks():
     archived = []
     skipped = []
 
-    if not tasks_dir.is_dir():
-        return archived, skipped
-
-    for path in sorted(tasks_dir.glob("*.md")):
+    for path in md_files(tasks_dir):
         # Case-insensitive, matching the original `grep -il '^completed:'`.
         if not has_field(path, "completed", ignore_case=True):
             continue

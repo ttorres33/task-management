@@ -12,7 +12,7 @@ Files with no type field, or an unrecognized one, stay in import/.
 """
 
 from config import describe_root, get_folder
-from taskquery import format_link, read_field
+from taskquery import format_link, md_files, read_field
 
 TYPE_TO_FOLDER = {
     "task": "tasks",
@@ -38,11 +38,11 @@ def clean_imports():
     if not import_dir.exists():
         return "no-dir", moved, skipped
 
-    md_files = sorted(import_dir.glob("*.md"))
-    if not md_files:
+    files = md_files(import_dir)
+    if not files:
         return "empty", moved, skipped
 
-    for file_path in md_files:
+    for file_path in files:
         file_type = read_field(file_path, "type")
 
         if not file_type or file_type not in TYPE_TO_FOLDER:

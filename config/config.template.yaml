@@ -1,23 +1,87 @@
-# Task Management Plugin Configuration
-# Copy this file to ~/.claude/task-management-config/config.yaml
-# and update the paths for your system.
+# Task Management Plugin — configuration reference
+#
+# There are two places configuration can live. Pick based on what you are doing:
+#
+#   1. A MARKER FILE in each tasks root — the normal way to configure a system.
+#   2. The GLOBAL CONFIG at ~/.claude/task-management-config/config.yaml — a router
+#      answering "which system when the working directory is outside every root?"
+#
+# Settings never merge. Whichever source applies supplies the whole set.
 
-paths:
-  # Root directory containing all task folders
-  tasks_root: "/path/to/your/Tasks"
 
-folders:
-  # Folder names within tasks_root
-  tasks: "tasks"           # Items with due dates
-  ideas: "ideas"           # Projects without due dates
-  templates: "templates"   # Reusable task templates
-  memories: "memories"     # Reference items (not actionable)
-  bugs: "bugs"             # Issues to fix
-  completed: "completed"   # Archived one-time tasks
-  import: "import"         # Staging area for triage
+# =============================================================================
+# 1. MARKER FILE
+# =============================================================================
+# This is NOT a .yaml file. Save it as `task-management-root.md` inside your tasks
+# root, frontmatter and all, exactly as shown below.
+#
+# Markdown rather than a dotfile because Obsidian Sync excludes hidden files and
+# treats .yaml as an optional file type, while Markdown always syncs. That is what
+# lets this file reach a second device, or someone you share a vault with.
+#
+# It contains no absolute paths: the root is implied by the file's own location, so
+# it works unchanged under a different home directory or username.
+#
+# ---
+# name: work
+# folders:
+#   tasks: "tasks"           # Items with due dates
+#   ideas: "ideas"           # Projects without due dates
+#   templates: "templates"   # Reusable task templates
+#   memories: "memories"     # Reference items (not actionable)
+#   bugs: "bugs"             # Issues to fix
+#   completed: "completed"   # Archived one-time tasks
+#   import: "import"         # Staging area for triage
+# links:
+#   format: "obsidian"       # "obsidian" for [[wiki-links]], "markdown" for [text](path)
+# integrations:
+#   research_system: false   # true adds a research digest section to /today
+#   research_digest_path: "../Research/daily-digests/{date}.md"
+# ---
+# # Task Management Root
+#
+# Marks this folder as a task-management root. Safe to edit; do not rename or move.
+#
+# Notes:
+#   - `name` is required. It is what makes this a marker rather than an ordinary
+#     note; a file with this name but no `name:` key is ignored.
+#   - `folders` may be omitted to accept the defaults, but must be listed in full if
+#     the root uses custom names — settings do not merge.
+#   - Only include `research_digest_path` when research_system is true.
 
-links:
-  format: "obsidian"       # "obsidian" for [[wiki-links]] or "markdown" for [text](path)
 
-integrations:
-  research_system: false   # Set to true to include research digest in /today
+# =============================================================================
+# 2. GLOBAL CONFIG — the router
+# =============================================================================
+# Copy this to ~/.claude/task-management-config/config.yaml.
+#
+# Only needed for running commands from outside every tasks root. If you always work
+# from inside a root, you do not need this file at all.
+
+default_root: "/path/to/your/Tasks"
+
+
+# =============================================================================
+# 3. GLOBAL CONFIG — legacy full-settings shape (still supported)
+# =============================================================================
+# What /setup wrote before 0.3.0. If your config looks like this, it still works and
+# needs no migration: the root resolves from `paths.tasks_root`, and any root without
+# a marker of its own uses these settings.
+#
+# paths:
+#   tasks_root: "/path/to/your/Tasks"
+#
+# folders:
+#   tasks: "tasks"
+#   ideas: "ideas"
+#   templates: "templates"
+#   memories: "memories"
+#   bugs: "bugs"
+#   completed: "completed"
+#   import: "import"
+#
+# links:
+#   format: "obsidian"
+#
+# integrations:
+#   research_system: false

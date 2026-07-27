@@ -25,7 +25,7 @@ sys.path.insert(0, str(TESTS_DIR))
 import fixture  # noqa: E402
 
 
-def run_pipeline_subprocess(out_dir, hostile=False):
+def run_pipeline_subprocess(out_dir, hostile=False, link_format=None):
     """
     Run the pipeline in a child process.
 
@@ -36,6 +36,8 @@ def run_pipeline_subprocess(out_dir, hostile=False):
     command = [sys.executable, str(TESTS_DIR / "runner.py"), "--out", str(out_dir)]
     if hostile:
         command.append("--hostile")
+    if link_format:
+        command += ["--link-format", link_format]
 
     result = subprocess.run(command, capture_output=True, text=True, cwd=str(REPO_ROOT))
     if result.returncode != 0:
@@ -87,6 +89,44 @@ class TestGoldenOutput(unittest.TestCase):
             "due: 3/9/2026", "due: 2026-03-09"
         )
         self.assertEqual(actual, expected)
+
+
+class TestMarkdownLinkFormat(unittest.TestCase):
+    """
+    The markdown link branch, against a baseline also captured from the pre-0.3.0
+    code.
+
+    Worth its own golden because format_link previously existed in three places with
+    two different signatures, and consolidating them is exactly the kind of change
+    that silently alters one caller. The obsidian baseline cannot catch it -- both
+    implementations produced identical output in obsidian mode.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.out = Path(cls.tmp.name) / "out"
+        run_pipeline_subprocess(cls.out, link_format="markdown")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_daily_matches_the_markdown_baseline(self):
+        expected = (BASELINE_DIR / "daily-markdown.txt").read_text(encoding="utf-8")
+        actual = (self.out / "daily.txt").read_text(encoding="utf-8")
+        self.assertEqual(expected, actual)
+
+    def test_clean_imports_matches_the_markdown_baseline(self):
+        expected = (BASELINE_DIR / "imports-markdown.txt").read_text(encoding="utf-8")
+        actual = (self.out / "imports.txt").read_text(encoding="utf-8")
+        self.assertEqual(expected, actual)
+
+    def test_links_really_are_in_markdown_form(self):
+        """Guards against both baselines silently being the obsidian one."""
+        today = _extract((self.out / "daily.txt").read_text(encoding="utf-8"), "today.md")
+        self.assertIn("](tasks/", today)
+        self.assertNotIn("[[", today)
 
 
 class TestHostilePaths(unittest.TestCase):

@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+"""
+The query layer's edge cases.
+
+These are the behaviors that reached the generated files through the old grep
+pipeline and are easy to change by accident when porting to Python. The golden
+baseline covers the common paths; this file covers the ones the fixture's filenames
+happen not to exercise.
+"""
+
+import shutil
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from support import import_plugin_module, marker, plugin_env, write  # noqa: E402
+
+
+class TaskQueryTestCase(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp()).resolve()
+        self.home = self.tmp / "home"
+        self.home.mkdir(parents=True)
+        self.root = self.tmp / "vault" / "Tasks"
+        (self.root / "tasks").mkdir(parents=True)
+        (self.root / "ideas").mkdir(parents=True)
+        (self.root / "completed").mkdir(parents=True)
+        write(self.root / "task-management-root.md", marker("test-root"))
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def task(self, name, body):
+        return write(self.root / "tasks" / name, body)
+
+
+class TestOverdueParsing(TaskQueryTestCase):
+    def test_a_second_due_line_does_not_drop_the_task(self):
+        """
+        The original joined grep's matching lines and split on 'due: ' with no
+        maxsplit, so element [1] was the text *between* the two occurrences -- the
+        first date, which parses. A maxsplit here would make element [1] run to the
+        end and never parse, silently dropping the task from Overdue.
+        """
+        self.task("double-due.md",
+                  "---\ntype: task\ndue: 2026-03-01\n---\n# T\n\ndue: 2026-03-02\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            overdue = taskquery.get_overdue_tasks("2026-03-11")
+
+        self.assertEqual(overdue, [("double-due", "2026-03-01")])
+
+    def test_an_unparseable_due_date_is_skipped_not_fatal(self):
+        self.task("bad-date.md", "---\ntype: task\ndue: sometime\n---\n# T\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            self.assertEqual(taskquery.get_overdue_tasks("2026-03-11"), [])
+
+    def test_due_without_a_space_is_not_matched(self):
+        """The original grep was '^due: ', space included."""
+        self.task("no-space.md", "---\ntype: task\ndue:2026-03-01\n---\n# T\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            self.assertEqual(taskquery.get_overdue_tasks("2026-03-11"), [])
+            self.assertEqual(taskquery.get_tasks_for_date("2026-03-01"), [])
+
+
+class TestFileSelection(TaskQueryTestCase):
+    def test_ordering_is_codepoint_not_case_insensitive(self):
+        """
+        Ordering reaches today.md directly. The shell glob this replaced sorted by
+        LC_COLLATE, and the environment these commands run in sets no locale, so
+        collation is C -- i.e. codepoint. Capitalized filenames are common in real
+        vaults, so pin it.
+        """
+        for name in ["Zebra.md", "apple.md", "Beta.md", "alpha.md"]:
+            self.task(name, "---\ntype: task\ndue: 2026-03-11\n---\n# T\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            found = taskquery.get_tasks_for_date("2026-03-11")
+
+        self.assertEqual(found, ["Beta", "Zebra", "alpha", "apple"])
+
+    def test_dotfiles_are_excluded(self):
+        """A shell glob without dotglob skipped these; Path.glob does not."""
+        self.task(".hidden.md", "---\ntype: task\ndue: 2026-03-11\n---\n# T\n")
+        self.task("visible.md", "---\ntype: task\ndue: 2026-03-11\n---\n# T\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            self.assertEqual(taskquery.get_tasks_for_date("2026-03-11"), ["visible"])
+
+    def test_a_missing_folder_yields_nothing_rather_than_raising(self):
+        shutil.rmtree(self.root / "ideas")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            self.assertEqual(taskquery.get_in_progress_ideas(), [])
+
+
+class TestResearchExclusion(TaskQueryTestCase):
+    def test_a_non_research_tags_line_does_not_exclude(self):
+        self.task("tagged.md",
+                  "---\ntype: task\ndue: 2026-03-11\ntags: [urgent, admin]\n---\n# T\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            self.assertEqual(taskquery.get_tasks_for_date("2026-03-11"), ["tagged"])
+
+    def test_research_tasks_are_excluded_from_due_today_but_listed_as_research(self):
+        self.task("paper.md",
+                  "---\ntype: task\ndue: 2026-03-11\ntags:\n  - research-review\n---\n# T\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            self.assertEqual(taskquery.get_tasks_for_date("2026-03-11"), [])
+            self.assertEqual(taskquery.get_research_tasks(), ["paper"])
+
+
+class TestLinkFormat(TaskQueryTestCase):
+    """
+    format_link previously existed in three places with two different signatures.
+    Both branches are pinned here, since the consolidation is the risky part.
+    """
+
+    def test_obsidian(self):
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            self.assertEqual(taskquery.format_link("a-task", "tasks"), "[[a-task]]")
+            self.assertEqual(taskquery.format_link("a-task"), "[[a-task]]")
+
+    def test_markdown_with_and_without_a_folder(self):
+        write(self.root / "task-management-root.md",
+              marker("test-root", links={"format": "markdown"}))
+
+        with plugin_env(cwd=self.root, home=self.home):
+            taskquery = import_plugin_module("taskquery")
+            self.assertEqual(taskquery.format_link("a-task", "tasks"),
+                             "[a-task](tasks/a-task.md)")
+            self.assertEqual(taskquery.format_link("a-task"), "[a-task](a-task.md)")
+
+
+class TestArchivingEdgeCases(TaskQueryTestCase):
+    def test_completed_field_match_is_case_insensitive(self):
+        """Mirrors the original `grep -il '^completed:'`."""
+        self.task("done.md", "---\ntype: task\nCompleted: 2026-03-01\n---\n# T\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            archiving = import_plugin_module("archiving")
+            archived, skipped = archiving.archive_completed_tasks()
+
+        self.assertEqual(archived, ["done.md"])
+        self.assertTrue((self.root / "completed" / "done.md").is_file())
+
+    def test_recurrence_match_is_case_sensitive(self):
+        """
+        Mirrors the original `grep -q '^recurrence:'`, which had no -i. A file with
+        `Recurrence:` was archived, not skipped.
+        """
+        self.task("weekly.md",
+                  "---\ntype: task\ncompleted: 2026-03-01\nRecurrence: weekly\n---\n# T\n")
+
+        with plugin_env(cwd=self.root, home=self.home):
+            archiving = import_plugin_module("archiving")
+            archived, skipped = archiving.archive_completed_tasks()
+
+        self.assertEqual(archived, ["weekly.md"])
+        self.assertEqual(skipped, [])
+
+
+if __name__ == "__main__":
+    unittest.main()

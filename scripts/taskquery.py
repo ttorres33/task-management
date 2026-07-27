@@ -20,16 +20,29 @@ from config import get_folder, get_link_format
 RESEARCH_TAGS = ("research-review", "research-summary-needed")
 
 
-def _md_files(directory):
+def md_files(directory):
     """
-    The .md files in `directory`, sorted by name.
+    The .md files in `directory`, in a stable order.
 
-    Sorted because the shell glob these calls replaced was sorted, and the order
-    reaches the generated files directly.
+    Ordering reaches the generated files directly -- it is the order bullets appear
+    under each day -- so it is pinned here rather than left to the filesystem.
+
+    Codepoint order, which is what the shell glob this replaced produced. Glob
+    expansion sorts by LC_COLLATE, and the environment these commands run in sets no
+    locale, so collation falls back to C. Verified against the live vault: the shell
+    glob and sorted() return identical order, including for capitalized filenames.
+
+    Under an explicit en_US.UTF-8 locale the old glob would have sorted
+    case-insensitively instead -- so the previous behavior was environment-dependent.
+    Fixing it to one deterministic order is deliberate.
+
+    Dotfiles are excluded, matching a shell glob without `dotglob`.
     """
     if not directory.is_dir():
         return []
-    return sorted(directory.glob("*.md"))
+    return sorted(
+        path for path in directory.glob("*.md") if not path.name.startswith(".")
+    )
 
 
 def _lines(path):
@@ -93,7 +106,7 @@ def is_research_task(path):
 def get_tasks_for_date(date):
     """Stems of tasks due exactly on `date`, excluding research tasks."""
     results = []
-    for path in _md_files(get_folder("tasks")):
+    for path in md_files(get_folder("tasks")):
         # Anchored at both ends, and requiring the space after the colon, exactly as
         # the original `grep -l '^due: {date}$'` did.
         if not _has_line(path, lambda line: line == f"due: {date}"):
@@ -109,19 +122,22 @@ def get_overdue_tasks(today):
     today_date = datetime.strptime(today, "%Y-%m-%d")
 
     overdue = []
-    for path in _md_files(get_folder("tasks")):
+    for path in md_files(get_folder("tasks")):
         due_lines = [line for line in _lines(path) if line.startswith("due: ")]
         if not due_lines:
             continue
         if is_research_task(path):
             continue
 
-        # The original took grep's whole output and split on the first 'due: '. With
-        # two due lines that yields an unparseable string and the file is skipped --
-        # preserved here rather than quietly fixed, since fixing it would change
-        # which tasks appear.
+        # The original joined grep's matching lines and split on 'due: ' with NO
+        # maxsplit, so with two due lines element [1] is the text *between* the two
+        # occurrences -- i.e. the first date, which parses. Adding a maxsplit here
+        # would make element [1] run to the end of the blob, never parse, and
+        # silently drop the task from Overdue. Preserved deliberately; `due_lines[0]`
+        # would read better but is a different answer when a body line also starts
+        # with "due: ".
         blob = "\n".join(due_lines).strip()
-        due_str = blob.split("due: ", 1)[1].strip()
+        due_str = blob.split("due: ")[1].strip()
         try:
             due_date = datetime.strptime(due_str, "%Y-%m-%d")
         except ValueError:
@@ -140,7 +156,7 @@ def get_research_tasks():
     unanchored, so a task whose body merely mentions the tag is included.
     """
     results = []
-    for path in _md_files(get_folder("tasks")):
+    for path in md_files(get_folder("tasks")):
         text = "\n".join(_lines(path))
         if any(tag in text for tag in RESEARCH_TAGS):
             results.append(path.stem)
@@ -161,7 +177,7 @@ def get_ideas_by_status(status):
         def matches(line):
             return line == f"status: {status}"
 
-    return [path.stem for path in _md_files(get_folder("ideas")) if _has_line(path, matches)]
+    return [path.stem for path in md_files(get_folder("ideas")) if _has_line(path, matches)]
 
 
 def get_in_progress_ideas():

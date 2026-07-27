@@ -42,15 +42,29 @@ def _strip_comment(text):
 
     A `#` inside a quoted value is data, not a comment -- which matters because the
     setup wizard writes quoted paths and a path may legitimately contain one.
+
+    An *unterminated* quote is treated as no quoting at all, rather than as a quote
+    running to end of line. Otherwise a bare apostrophe in ordinary prose
+    (`name: rick's tasks  # household`) would swallow the comment into the value.
     """
     quote = None
+    quote_start = None
     for i, ch in enumerate(text):
         if quote:
             if ch == quote:
                 quote = None
         elif ch in "\"'":
             quote = ch
+            quote_start = i
         elif ch == "#" and (i == 0 or text[i - 1] in " \t"):
+            return text[:i]
+
+    if quote is None:
+        return text
+
+    # Unterminated: re-scan for a comment marker, ignoring quotes entirely.
+    for i in range(quote_start, len(text)):
+        if text[i] == "#" and (i == 0 or text[i - 1] in " \t"):
             return text[:i]
     return text
 
@@ -139,6 +153,15 @@ def parse(text):
             if current_list is None:
                 if current_key is None:
                     raise ParseError(f"line {lineno}: list item outside any key")
+                if current_map:
+                    # Replacing a populated map with a list would silently discard
+                    # every key already read under it -- exactly the kind of quiet
+                    # wrong answer this parser exists to avoid.
+                    raise ParseError(
+                        f"line {lineno}: list item under {current_key!r}, which "
+                        "already has named values. A key holds either a block of "
+                        "name/value pairs or a list, not both."
+                    )
                 current_list = []
                 result[current_key] = current_list
                 current_map = None
@@ -218,15 +241,30 @@ def split_frontmatter(text):
     """
     Return (frontmatter_text, body) for a `---` delimited document.
 
-    Returns (None, text) when there is no frontmatter. Used to read marker files;
-    task files keep their own line-based handling.
+    Returns (None, text) when there is no frontmatter.
+
+    The closing delimiter must be a line consisting only of `---`. A plain
+    text.split("---", 2) would cut at the first `---` *anywhere*, so a value
+    containing one (`name: a---b`) would silently truncate the frontmatter and drop
+    every key after it -- leaving a file that still parses, still looks like a valid
+    marker, and quietly runs on built-in defaults.
+
+    Used to read marker files only. Task files keep their own line-based handling;
+    normalize.py deliberately still uses the loose split, because there it is
+    preserved pre-0.3.0 behavior on user-authored files.
     """
     if not text.startswith("---"):
         return None, text
-    parts = text.split("---", 2)
-    if len(parts) < 3:
+
+    lines = text.split("\n")
+    if lines[0].strip() != "---":
         return None, text
-    return parts[1], parts[2]
+
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            return "\n".join(lines[1:index]), "\n".join(lines[index + 1:])
+
+    return None, text
 
 
 def load_frontmatter(path):

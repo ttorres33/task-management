@@ -260,13 +260,6 @@ def _settings():
     return _settings_cache
 
 
-def _reset_caches():
-    """Drop cached resolution. For tests, which exercise several roots per process."""
-    global _resolution_cache, _settings_cache
-    _resolution_cache = None
-    _settings_cache = None
-
-
 # ------------------------------------------------------------------------ public API
 
 
@@ -275,11 +268,52 @@ def get_tasks_root():
     return resolve_root()[0]
 
 
+def _validate_folder_name(key, value, source):
+    """
+    Check that a configured folder name is a plain name inside the root.
+
+    This exists because of where markers come from. Before 0.3.0 every setting lived
+    in ~/.claude/, owned by the user running the command. A marker file arrives over
+    Obsidian Sync from whoever else has the vault -- that is the entire point of the
+    sharing feature -- so `folders` values are now input from another machine.
+
+    An entry like `completed: "../../../elsewhere"` would make /archive move a
+    collaborator's task files out of the vault entirely, and clean-imports would
+    happily mkdir the destination first. Far more likely than malice is a typo or a
+    well-meant edit, and both fail the same way.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(
+            f"folders.{key} in {source} must be a folder name, got {value!r}.\n"
+            "Quote it if it looks like something else -- YAML reads bare `no` and "
+            "`yes` as booleans."
+        )
+    if value != Path(value).name or value in (".", ".."):
+        raise ValueError(
+            f"folders.{key} in {source} must be a single folder name inside the "
+            f"tasks root, not a path: {value!r}"
+        )
+    return value
+
+
 def get_folder(name):
     """Return the path to a named folder within the tasks root."""
-    settings, _ = _settings()
-    folders = settings.get("folders") or {}
-    return get_tasks_root() / folders.get(name, DEFAULT_FOLDERS.get(name, name))
+    settings, source = _settings()
+    folders = settings.get("folders")
+    if folders is None:
+        folders = {}
+    elif not isinstance(folders, dict):
+        raise ValueError(
+            f"`folders` in {source} must be a block of name/value pairs, "
+            f"got {type(folders).__name__}."
+        )
+
+    if name in folders:
+        folder_name = _validate_folder_name(name, folders[name], source)
+    else:
+        folder_name = DEFAULT_FOLDERS.get(name, name)
+
+    return get_tasks_root() / folder_name
 
 
 def get_all_task_dirs():
@@ -307,11 +341,19 @@ def get_research_digest_path(date):
     check and to build a link -- never written to, never created, never used to
     resolve a folder the plugin manages.
     """
-    settings, _ = _settings()
+    settings, source = _settings()
     template = (settings.get("integrations") or {}).get(
         "research_digest_path", DEFAULT_RESEARCH_DIGEST_PATH
     )
-    return Path(os.path.normpath(get_tasks_root() / str(template).format(date=date)))
+    try:
+        relative = str(template).format(date=date)
+    except (KeyError, IndexError) as error:
+        raise ValueError(
+            f"integrations.research_digest_path in {source} uses a placeholder this "
+            f"plugin does not provide: {error}.\n"
+            f"The only supported placeholder is {{date}}. Got: {template!r}"
+        ) from error
+    return Path(os.path.normpath(get_tasks_root() / relative))
 
 
 def get_root_name():
