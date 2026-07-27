@@ -1,0 +1,307 @@
+=== DIR  bugs/
+=== FILE bugs/a-bug.md
+---
+type: bug
+created: 2026-03-01
+---
+# A Bug
+
+Its `created:` date is unnormalized, proving the normalizer walks bugs/ too.
+
+=== END
+=== DIR  completed/
+=== FILE completed/completed-one-time.md
+---
+type: task
+due: 2026-03-07
+completed: 2026-03-10
+---
+# Completed One Time
+
+Archiving runs before generation, so this must not show up as overdue.
+
+=== END
+=== DIR  ideas/
+=== FILE ideas/idea-in-progress-hyphen.md
+---
+type: idea
+status: in-progress
+---
+# Idea With Hyphen Spelling
+
+=== END
+=== FILE ideas/idea-in-progress-space.md
+---
+type: idea
+status: in progress
+---
+# Idea With Space Spelling
+
+=== END
+=== FILE ideas/idea-noodling.md
+---
+type: idea
+status: noodling
+---
+# Noodling Idea
+
+=== END
+=== FILE ideas/idea-someday.md
+---
+type: idea
+status: someday
+---
+# Someday Idea
+
+Excluded from every view.
+
+=== END
+=== FILE ideas/idea-unstatused.md
+---
+type: idea
+---
+# Unstatused Idea
+
+Excluded from every view.
+
+=== END
+=== DIR  import/
+=== FILE import/import-bug.md
+---
+type: bug
+---
+# Imported Bug
+
+=== END
+=== FILE import/import-idea.md
+---
+type: idea
+status: noodling
+---
+# Imported Idea
+
+=== END
+=== FILE import/import-no-type.md
+---
+due: 2026-03-20
+---
+# Imported With No Type
+
+Stays in import/.
+
+=== END
+=== FILE import/import-task.md
+---
+type: task
+due: 2026-03-17
+---
+# Imported Task
+
+=== END
+=== FILE import/import-unknown-type.md
+---
+type: widget
+---
+# Imported Unknown Type
+
+Stays in import/.
+
+=== END
+=== DIR  memories/
+=== FILE next-week.md
+---
+week_start: 2026-03-16
+week_end: 2026-03-22
+---
+# Next Week - Week of March 16
+
+## Monday, March 16
+- [ ] [[next-week-mon]]
+
+## Friday, March 20
+- [ ] [[next-week-fri-also]]
+- [ ] [[next-week-fri]]
+
+
+=== END
+=== DIR  tasks/
+=== FILE tasks/body-has-hr.md
+---
+type: task
+due: 2026-03-09
+---
+# Body Has Horizontal Rule
+
+Section one.
+
+---
+
+Section two, after a `---` rule.
+
+---
+
+=== END
+=== FILE tasks/completed-recurring.md
+---
+type: task
+due: 2026-03-11
+completed: 2026-03-04
+recurrence: weekly
+---
+# Completed Recurring
+
+Completed but recurring: stays in tasks/ forever.
+
+=== END
+=== FILE tasks/due-today-one.md
+---
+type: task
+due: 2026-03-11
+---
+# Due Today One
+
+=== END
+=== FILE tasks/due-today-two.md
+---
+type: task
+due: 2026-03-11
+---
+# Due Today Two
+
+=== END
+=== FILE tasks/next-week-fri-also.md
+---
+type: task
+due: 2026-03-20
+---
+# Another Next Friday Task
+
+=== END
+=== FILE tasks/next-week-fri.md
+---
+type: task
+due: 2026-03-20
+---
+# Next Friday Task
+
+=== END
+=== FILE tasks/next-week-mon.md
+---
+type: task
+due: 2026-03-16
+---
+# Next Monday Task
+
+=== END
+=== FILE tasks/no-due-date.md
+---
+type: task
+---
+# No Due Date
+
+Never appears in any generated view.
+
+=== END
+=== FILE tasks/overdue-alpha.md
+---
+type: task
+due: 2026-03-08
+---
+# Overdue Alpha
+
+Three days late.
+
+=== END
+=== FILE tasks/overdue-beta.md
+---
+type: task
+due: 2026-03-06
+---
+# Overdue Beta
+
+Slash-format date.
+
+=== END
+=== FILE tasks/research-multi-line.md
+---
+type: task
+due: 2026-03-09
+tags:
+  - research-summary-needed
+  - reading
+---
+# Research Multi Line
+
+Tagged as a block. Overdue, but research tasks are excluded from Overdue.
+
+=== END
+=== FILE tasks/research-single-line.md
+---
+type: task
+due: 2026-03-11
+tags: [research-review, reading]
+---
+# Research Single Line
+
+Tagged inline. Belongs under Research, not Due Today.
+
+=== END
+=== FILE tasks/rest-of-week-sun.md
+---
+type: task
+due: 2026-03-15
+---
+# Sunday Task
+
+Last day of this week.
+
+=== END
+=== FILE tasks/rest-of-week-thu.md
+---
+type: task
+due: 2026-03-12
+---
+# Thursday Task
+
+=== END
+=== DIR  templates/
+=== FILE this-week.md
+---
+week_start: 2026-03-09
+week_end: 2026-03-15
+---
+# This Week - Week ending March 15
+
+## Thursday, March 12
+- [ ] [[rest-of-week-thu]]
+
+## Sunday, March 15
+- [ ] [[rest-of-week-sun]]
+
+
+=== END
+=== FILE today.md
+---
+date: 2026-03-11
+---
+# Today - Wednesday, March 11
+
+## Overdue
+- [ ] [[body-has-hr]] (due: 2026-03-09)
+- [ ] [[overdue-alpha]] (due: 2026-03-08)
+- [ ] [[overdue-beta]] (due: 2026-03-06)
+
+## Due Today
+- [ ] [[completed-recurring]]
+- [ ] [[due-today-one]]
+- [ ] [[due-today-two]]
+
+## In Progress Ideas
+- [[idea-in-progress-hyphen]]
+- [[idea-in-progress-space]]
+
+## Research
+- [ ] [[research-multi-line]]
+- [ ] [[research-single-line]]
+
+=== END
