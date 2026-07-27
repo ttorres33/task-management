@@ -94,6 +94,7 @@ Write `<tasks_root>/task-management-root.md`:
 
 ```markdown
 ---
+task_management_root: true
 name: <short-name, e.g. work or household>
 folders:
   tasks: "tasks"
@@ -116,8 +117,11 @@ Marks this folder as a task-management root. Safe to edit; do not rename or move
 
 Notes:
 
-- `name` is what makes the file a valid marker. Without it, the file is treated as an
-  ordinary note and ignored.
+- `task_management_root: true` is what makes the file a marker. Without it the file is
+  treated as an ordinary note and ignored — which is deliberate, since an Obsidian
+  vault could plausibly contain a note with this filename.
+- `name` is only a label. It names the root in command output and defaults to the
+  folder name. Always write it anyway; it is what makes two systems tellable apart.
 - The `folders` block may be omitted to accept the defaults, but it must be present if
   this root uses custom folder names. Settings do not merge — a marker supplies the
   whole set or none of it.

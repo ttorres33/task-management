@@ -39,10 +39,21 @@ import markerparse
 # management -- including one sitting in a task system's own ideas/ folder.
 MARKER_FILENAME = "task-management-root.md"
 
-# A file is a marker only if it parses AND carries this key. A file that merely has
-# the right name is ignored, silently. Without that rule a stray note could hijack
+# A file is a marker only if it parses AND declares this key true. A file that merely
+# has the right name is ignored, silently. Without that rule a stray note could hijack
 # resolution, or brick every command by failing to parse.
-MARKER_KEY = "name"
+#
+# A dedicated key rather than a general one: `name:` alone is low-entropy enough that
+# an ordinary note could carry it by coincidence -- including a note at
+# ideas/task-management-root.md, which is exactly the collision the filename's `-root`
+# suffix was chosen to make unlikely. Resolving to the wrong folder writes files
+# there, and printing the resolved root afterwards is no guard against a write that
+# already happened. Nothing in a vault has `task_management_root: true` by accident.
+MARKER_KEY = "task_management_root"
+
+# The root's human label. Optional -- it names the root in command output and defaults
+# to the folder name. It is deliberately NOT what makes the file a marker.
+NAME_KEY = "name"
 
 CONFIG_DIR = Path.home() / ".claude" / "task-management-config"
 CONFIG_FILE = CONFIG_DIR / "config.yaml"
@@ -70,26 +81,63 @@ _settings_cache = None
 # --------------------------------------------------------------------------- markers
 
 
-def read_marker(path):
+def _declares_marker_key(data):
     """
-    Return a marker's parsed frontmatter, or None if `path` is not a valid marker.
+    True if the frontmatter declares `task_management_root` true.
 
-    A parse failure here is not an error: during resolution we are asking "is this a
-    marker?", and the answer for an unparseable file is simply no.
+    Accepts the quoted spellings as well as the bare boolean, so a marker written by
+    hand does not fail on a detail nobody should have to think about.
+    """
+    value = data.get(MARKER_KEY)
+    if value is True:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "yes")
+    return False
+
+
+def inspect_marker(path):
+    """
+    Classify a file occupying the marker filename. Returns (status, payload):
+
+        "absent"        no such file
+        "unreadable"    exists but did not parse; payload is the reason
+        "not-a-marker"  parses, but does not declare task_management_root
+        "valid"         payload is the parsed frontmatter
+
+    The distinction matters twice over. During resolution, anything but "valid" simply
+    means "keep looking" -- a note that happens to share the filename must never
+    hijack resolution, and must never be an error either. But when nothing resolves at
+    all, a near-miss is by far the most useful thing to put in the error message, so
+    the reason is preserved rather than collapsed into a bare None.
     """
     try:
         if not path.is_file():
-            return None
+            return "absent", None
         data = markerparse.load_frontmatter(path)
-    except (markerparse.ParseError, OSError, UnicodeDecodeError):
-        return None
-    if not isinstance(data, dict) or MARKER_KEY not in data:
-        return None
-    return data
+    except (markerparse.ParseError, OSError, UnicodeDecodeError) as error:
+        return "unreadable", str(error)
+
+    if not isinstance(data, dict) or not _declares_marker_key(data):
+        return "not-a-marker", None
+    return "valid", data
 
 
-def _marker_in(directory):
-    return read_marker(directory / MARKER_FILENAME)
+def read_marker(path):
+    """Return a marker's parsed frontmatter, or None if `path` is not a valid marker."""
+    status, payload = inspect_marker(path)
+    return payload if status == "valid" else None
+
+
+def _marker_in(directory, near_misses=None):
+    """Return the marker data in `directory`, recording a near-miss if there is one."""
+    path = directory / MARKER_FILENAME
+    status, payload = inspect_marker(path)
+    if status == "valid":
+        return payload
+    if near_misses is not None and status != "absent":
+        near_misses.append((path, status, payload))
+    return None
 
 
 # ------------------------------------------------------------------------ resolution
@@ -107,14 +155,14 @@ def _resolve_from_env():
     return root, "environment ($TASK_MANAGEMENT_ROOT)"
 
 
-def _resolve_upward(start):
+def _resolve_upward(start, near_misses=None):
     for directory in [start, *start.parents]:
-        if _marker_in(directory):
+        if _marker_in(directory, near_misses):
             return directory, "marker"
     return None
 
 
-def _resolve_in_children(start):
+def _resolve_in_children(start, near_misses=None):
     """
     Look one level down for a marker.
 
@@ -129,7 +177,7 @@ def _resolve_in_children(start):
     except OSError:
         return None
 
-    matches = [child for child in children if _marker_in(child)]
+    matches = [child for child in children if _marker_in(child, near_misses)]
     if not matches:
         return None
     if len(matches) > 1:
@@ -164,22 +212,39 @@ def _resolve_from_global_config():
     return Path(str(raw)).expanduser(), "global config"
 
 
-def _no_root_error(start):
-    return FileNotFoundError(
+def _no_root_error(start, near_misses=()):
+    message = (
         "No task system found.\n\n"
         f"Searched for {MARKER_FILENAME} in {start} and every directory above it, "
         f"and in each of its immediate subdirectories.\n"
-        f"Also checked {CONFIG_FILE}.\n\n"
-        "To fix this, do one of:\n"
-        f"  - Run /task-management:setup from inside your tasks folder.\n"
+        f"Also checked {CONFIG_FILE}.\n"
+    )
+
+    if near_misses:
+        message += "\nFound a file with that name, but it is not a marker:\n"
+        for path, status, reason in near_misses:
+            if status == "not-a-marker":
+                message += (
+                    f"  - {path}\n"
+                    f"    Its frontmatter does not declare `{MARKER_KEY}: true`. Add "
+                    "that line if\n    this really is a tasks root; otherwise ignore "
+                    "this -- an ordinary note\n    sharing the filename is harmless.\n"
+                )
+            else:
+                message += f"  - {path}\n    Could not be parsed: {reason}\n"
+
+    message += (
+        "\nTo fix this, do one of:\n"
+        "  - Run /task-management:setup from inside your tasks folder.\n"
         f"  - Create {MARKER_FILENAME} in your tasks folder, containing at minimum:\n"
         "        ---\n"
-        "        name: my-tasks\n"
+        f"        {MARKER_KEY}: true\n"
         "        ---\n"
         "  - Set $TASK_MANAGEMENT_ROOT to your tasks folder for a one-off run.\n\n"
         "Or run the command from inside a tasks folder, or from the directory "
         "directly above one."
     )
+    return FileNotFoundError(message)
 
 
 def resolve_root():
@@ -190,14 +255,18 @@ def resolve_root():
 
     start = Path.cwd()
 
+    # Files that occupy the marker filename but are not markers. Collected only so a
+    # failure can name them; they never affect resolution itself.
+    near_misses = []
+
     resolved = (
         _resolve_from_env()
-        or _resolve_upward(start)
-        or _resolve_in_children(start)
+        or _resolve_upward(start, near_misses)
+        or _resolve_in_children(start, near_misses)
         or _resolve_from_global_config()
     )
     if resolved is None:
-        raise _no_root_error(start)
+        raise _no_root_error(start, near_misses)
 
     root, source = resolved
     if not root.is_dir():
@@ -226,27 +295,28 @@ def _settings():
     root, _ = resolve_root()
 
     marker_path = root / MARKER_FILENAME
-    if marker_path.is_file():
+    status, payload = inspect_marker(marker_path)
+
+    if status == "valid":
+        _settings_cache = (payload, f"marker ({marker_path})")
+        return _settings_cache
+
+    if status == "unreadable":
         # Resolution tolerates an unparseable candidate, because there the question
         # is only "is this a marker?". Here we are committed to this root, and a
         # marker we cannot read would mean running with settings the user did not
         # choose -- so a parse failure is fatal and says so.
-        try:
-            data = markerparse.load_frontmatter(marker_path)
-        except (markerparse.ParseError, OSError, UnicodeDecodeError) as error:
-            raise markerparse.ParseError(
-                f"{marker_path} could not be read as a marker file.\n"
-                f"  {error}\n\n"
-                "Marker files support simple key/value pairs, one level of nesting, "
-                "and lists. Fix the file, or delete it to fall back to the global "
-                "config."
-            ) from error
+        raise markerparse.ParseError(
+            f"{marker_path} could not be read as a marker file.\n"
+            f"  {payload}\n\n"
+            "Marker files support simple key/value pairs, one level of nesting, "
+            "and lists. Fix the file, or delete it to fall back to the global "
+            "config."
+        )
 
-        if isinstance(data, dict) and MARKER_KEY in data:
-            _settings_cache = (data, f"marker ({marker_path})")
-            return _settings_cache
-        # Parses, but carries no `name:` key -- so it is an ordinary note that
-        # happens to share the filename, not a marker. Fall through.
+    # "not-a-marker": it parses but does not declare task_management_root, so it is an
+    # ordinary note that happens to share the filename. Fall through rather than fail
+    # -- a note is not a broken marker.
 
     # A root with no marker falls back to the global config's settings even when
     # that config names a *different* root. This is the one path by which one root's
@@ -357,9 +427,13 @@ def get_research_digest_path(date):
 
 
 def get_root_name():
-    """Return this root's name, from its marker, or the folder name as a fallback."""
+    """
+    Return this root's label, from its marker's `name`, or the folder name.
+
+    `name` is optional: what makes a file a marker is MARKER_KEY, not this.
+    """
     settings, _ = _settings()
-    name = settings.get(MARKER_KEY)
+    name = settings.get(NAME_KEY)
     return str(name) if name else get_tasks_root().name
 
 

@@ -35,6 +35,7 @@ a task system and holds that system's settings:
 
 ```markdown
 ---
+task_management_root: true
 name: work
 folders:
   tasks: "tasks"
@@ -55,8 +56,15 @@ integrations:
 Marks this folder as a task-management root. Safe to edit; do not rename or move.
 ```
 
-- **`name`** — required. It is what makes the file a marker rather than an ordinary
-  note. A file with this name but no `name:` key is ignored.
+- **`task_management_root: true`** — required. It is what makes the file a marker
+  rather than an ordinary note. A file with the marker's filename but without this key
+  is ignored, silently — an Obsidian vault could plausibly hold a note called
+  `task-management-root.md`, and resolving to it would mean writing generated files
+  into the wrong folder. If you create a marker by hand and forget this line, the
+  error will name the file and tell you what is missing.
+- **`name`** — optional label. It names the root in command output and defaults to the
+  folder name. Worth setting when you have more than one system, so they are tellable
+  apart at a glance.
 - **`folders`** — optional. Omit it to accept the defaults shown above. Include it in
   full if this root uses custom folder names: settings never merge, so a marker
   supplies either the whole set or none of it.
@@ -139,8 +147,9 @@ say.
    [File Structure](#file-structure).
 
 2. **Run `/task-management:setup` from inside the new root**, or write
-   `task-management-root.md` there by hand using the schema above. Give it a `name`
-   that tells the two apart — the name appears in every command's output.
+   `task-management-root.md` there by hand using the schema above. It needs
+   `task_management_root: true` to count as a marker at all; give it a `name` that
+   tells the two systems apart, since the name appears in every command's output.
 
    If the new root uses custom folder names, its marker must list all of them.
    Settings do not merge; the new root will not inherit `folders` from your first
@@ -329,6 +338,22 @@ Task content here.
 
 Dates written as `3/11/2026` or `2026-3-11` are normalized to `2026-03-11` on the next
 `/today` run.
+
+## Upgrading from 0.3.0
+
+If you wrote a marker file against 0.3.0, add one line to it:
+
+```yaml
+task_management_root: true
+```
+
+0.3.0 treated any `task-management-root.md` carrying a `name:` key as a marker. That
+was too weak: `name:` is common enough that an ordinary note could carry it by
+coincidence, and resolving to the wrong folder means writing generated files into it.
+0.3.1 keys on a dedicated flag instead, and `name` became an optional label.
+
+If you skip this, commands report that no task system was found — and the error names
+the file and the missing line.
 
 ## Upgrading from 0.2.x
 

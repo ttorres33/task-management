@@ -23,6 +23,7 @@
 # it works unchanged under a different home directory or username.
 #
 # ---
+# task_management_root: true
 # name: work
 # folders:
 #   tasks: "tasks"           # Items with due dates
@@ -43,8 +44,12 @@
 # Marks this folder as a task-management root. Safe to edit; do not rename or move.
 #
 # Notes:
-#   - `name` is required. It is what makes this a marker rather than an ordinary
-#     note; a file with this name but no `name:` key is ignored.
+#   - `task_management_root: true` is required. It is what makes this a marker rather
+#     than an ordinary note; a file with this filename but without that key is
+#     ignored. A vault can plausibly contain a note called task-management-root.md,
+#     and resolving to it would write generated files into the wrong folder.
+#   - `name` is an optional label, defaulting to the folder name. Set it when you run
+#     more than one system, so command output tells them apart.
 #   - `folders` may be omitted to accept the defaults, but must be listed in full if
 #     the root uses custom names — settings do not merge.
 #   - Only include `research_digest_path` when research_system is true.

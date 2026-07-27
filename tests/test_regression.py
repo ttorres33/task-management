@@ -236,7 +236,8 @@ class TestStockPythonCompatibility(unittest.TestCase):
             root = Path(tmp) / "Tasks"
             root.mkdir()
             (root / "task-management-root.md").write_text(
-                "---\nname: stock-python\n---\n", encoding="utf-8"
+                "---\ntask_management_root: true\nname: stock-python\n---\n",
+                encoding="utf-8",
             )
 
             failures = []

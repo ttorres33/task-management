@@ -87,8 +87,13 @@ def marker(name="test-root", **sections):
 
     `sections` become nested blocks, e.g. folders={"tasks": "t"} renders as
     a `folders:` block with `  tasks: t` beneath it.
+
+    `task_management_root: true` is what makes the file a marker; `name` is only a
+    label. Pass name=None to build a marker without one.
     """
-    lines = ["---", f"name: {name}"]
+    lines = ["---", "task_management_root: true"]
+    if name is not None:
+        lines.append(f"name: {name}")
     for key, value in sections.items():
         lines.append(f"{key}:")
         for subkey, subvalue in value.items():

@@ -102,6 +102,42 @@ class TestRootResolution(ResolutionTestCase):
             with self.assertRaises(FileNotFoundError):
                 config.resolve_root()
 
+    def test_a_note_carrying_only_a_name_key_is_not_a_marker(self):
+        """
+        The reason validity keys on `task_management_root` rather than on `name`.
+
+        `name:` is low-entropy enough to appear in an ordinary note by coincidence --
+        including a note at ideas/task-management-root.md, which is exactly the
+        collision the filename's `-root` suffix was chosen to make unlikely. Resolving
+        there would make /today write three files into ideas/.
+        """
+        ideas = self.tmp / "vault" / "Tasks" / "ideas"
+        ideas.mkdir(parents=True)
+        write(ideas / "task-management-root.md",
+              "---\nname: task management root\ntags: [meta]\n---\n"
+              "# Thoughts on how I organize tasks\n")
+
+        with plugin_env(cwd=ideas, home=self.home) as config:
+            with self.assertRaises(FileNotFoundError):
+                config.resolve_root()
+
+    def test_a_near_miss_is_named_in_the_error(self):
+        """
+        Silently ignoring a would-be marker is right for resolution but unhelpful on
+        failure. Someone who wrote the file by hand and omitted the key would
+        otherwise get "no task system found" while staring at the file they just made.
+        """
+        root = self.make_root("vault/Tasks", with_marker=False)
+        write(root / "task-management-root.md", "---\nname: my-tasks\n---\n# Root\n")
+
+        with plugin_env(cwd=root, home=self.home) as config:
+            with self.assertRaises(FileNotFoundError) as caught:
+                config.resolve_root()
+
+        message = str(caught.exception)
+        self.assertIn(str(root / "task-management-root.md"), message)
+        self.assertIn("task_management_root: true", message)
+
     def test_stray_marker_named_note_beside_a_real_marker(self):
         """
         A naming coincidence must not become an ambiguity error. Only two *valid*
@@ -112,11 +148,40 @@ class TestRootResolution(ResolutionTestCase):
         stray = vault / "Notes"
         stray.mkdir(parents=True, exist_ok=True)
         write(stray / "task-management-root.md",
-              "---\ntags: [meta]\n---\n# A note that shares the name\n")
+              "---\nname: notes\ntags: [meta]\n---\n# A note that shares the name\n")
 
         with plugin_env(cwd=vault, home=self.home) as config:
             resolved, _ = config.resolve_root()
             self.assertEqual(resolved, real)
+
+    def test_the_marker_flag_accepts_quoted_spellings(self):
+        """A marker written by hand should not fail on a detail nobody thinks about."""
+        for index, spelling in enumerate(['true', '"true"', 'yes']):
+            with self.subTest(spelling):
+                root = self.tmp / "vault-{}".format(index) / "Tasks"
+                root.mkdir(parents=True, exist_ok=True)
+                write(root / "task-management-root.md",
+                      f"---\ntask_management_root: {spelling}\n---\n")
+
+                with plugin_env(cwd=root, home=self.home) as config:
+                    self.assertEqual(config.resolve_root()[0], root)
+
+    def test_the_marker_flag_set_false_is_not_a_marker(self):
+        root = self.make_root("vault/Tasks", with_marker=False)
+        write(root / "task-management-root.md",
+              "---\ntask_management_root: false\nname: disabled\n---\n")
+
+        with plugin_env(cwd=root, home=self.home) as config:
+            with self.assertRaises(FileNotFoundError):
+                config.resolve_root()
+
+    def test_name_is_optional(self):
+        root = self.make_root("vault/Tasks", with_marker=False)
+        write(root / "task-management-root.md", "---\ntask_management_root: true\n---\n")
+
+        with plugin_env(cwd=root, home=self.home) as config:
+            self.assertEqual(config.resolve_root()[0], root)
+            self.assertEqual(config.get_root_name(), "Tasks")  # falls back to folder
 
     def test_two_valid_markers_in_children_is_ambiguous(self):
         vault = self.tmp / "vault"
@@ -273,7 +338,7 @@ class TestSettingsResolution(ResolutionTestCase):
         """
         root = self.make_root("vault/Tasks", with_marker=False)
         write(root / "task-management-root.md",
-              "---\nname: broken\nfolders:\n  nested:\n    too: deep\n---\n")
+              "---\ntask_management_root: true\nfolders:\n  nested:\n    too: deep\n---\n")
 
         with plugin_env(cwd=self.tmp, home=self.home, root_override=root) as config:
             markerparse = support.import_plugin_module("markerparse")
@@ -322,7 +387,7 @@ class TestSettingsResolution(ResolutionTestCase):
         """
         root = self.make_root("vault/Tasks", with_marker=False)
         write(root / "task-management-root.md",
-              "---\nname: t\nfolders:\n  tasks: no\n---\n")
+              "---\ntask_management_root: true\nfolders:\n  tasks: no\n---\n")
 
         with plugin_env(cwd=root, home=self.home) as config:
             with self.assertRaises(ValueError) as caught:
